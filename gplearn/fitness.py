@@ -13,6 +13,7 @@ import numbers
 import numpy as np
 from joblib import wrap_non_picklable_objects
 from scipy.stats import rankdata
+import math
 
 __all__ = ['make_fitness']
 
@@ -146,6 +147,12 @@ def _log_loss(y, y_pred, w):
     return np.average(-score, weights=w)
 
 
+def _weighted_mean_absolute_error(y, y_pred, w):
+    """Calculate the mean absolute error with terms scaled by n!."""
+    weights = np.vectorize(math.factorial)(np.arange(len(y)))
+    return np.average(weights * np.abs(y_pred - y), weights=w)
+
+
 weighted_pearson = _Fitness(function=_weighted_pearson,
                             greater_is_better=True)
 weighted_spearman = _Fitness(function=_weighted_spearman,
@@ -159,9 +166,14 @@ root_mean_square_error = _Fitness(function=_root_mean_square_error,
 log_loss = _Fitness(function=_log_loss,
                     greater_is_better=False)
 
+weighted_mean_absolute_error = _Fitness(function=_weighted_mean_absolute_error,
+                                        greater_is_better=False)
+
 _fitness_map = {'pearson': weighted_pearson,
                 'spearman': weighted_spearman,
                 'mean absolute error': mean_absolute_error,
                 'mse': mean_square_error,
                 'rmse': root_mean_square_error,
-                'log loss': log_loss}
+                'log loss': log_loss,
+                'weighted_mae': weighted_mean_absolute_error
+                }

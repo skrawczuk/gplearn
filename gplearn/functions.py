@@ -10,6 +10,8 @@ own custom functions.
 # License: BSD 3 clause
 
 import numpy as np
+import sympy as sp
+import math
 from joblib import wrap_non_picklable_objects
 
 __all__ = ['make_function']
@@ -150,6 +152,30 @@ def _sigmoid(x1):
         return 1 / (1 + np.exp(-x1))
 
 
+def _protected_power(x1, x2):
+    """power with exponent limited to [0, 4] to prevent blowup."""
+    x2 = np.clip(x2, 0, 4).astype(int)
+    if isinstance(x1, float):
+        x1 = int(x1)
+    return np.power(x1, x2)
+
+
+def _protected_factorial(x1):
+    """factorial with input limited to [0, 20] to prevent blowup"""
+    x1 = np.clip(x1, 0, 20, dtype=np.int, casting='unsafe')
+    return np.vectorize(math.factorial)(x1)
+
+
+def _alternating_sin(x1):
+    """for use in alternating series"""
+    return np.sin(np.pi / 2 * x1)
+
+
+def _alternating_cos(x1):
+    """for use in alternating series"""
+    return np.cos(np.pi / 2 * x1)
+
+
 add2 = _Function(function=np.add, name='add', arity=2)
 sub2 = _Function(function=np.subtract, name='sub', arity=2)
 mul2 = _Function(function=np.multiply, name='mul', arity=2)
@@ -165,6 +191,10 @@ sin1 = _Function(function=np.sin, name='sin', arity=1)
 cos1 = _Function(function=np.cos, name='cos', arity=1)
 tan1 = _Function(function=np.tan, name='tan', arity=1)
 sig1 = _Function(function=_sigmoid, name='sig', arity=1)
+pow2 = _Function(function=_protected_power, name='power', arity=2)
+fac1 = _Function(function=_protected_factorial, name='factorial', arity=1)
+alt_cos1 = _Function(function=_alternating_cos, name='alt_cos', arity=1)
+alt_sin1 = _Function(function=_alternating_sin, name='alt_sin', arity=1)
 
 _function_map = {'add': add2,
                  'sub': sub2,
@@ -179,4 +209,51 @@ _function_map = {'add': add2,
                  'min': min2,
                  'sin': sin1,
                  'cos': cos1,
-                 'tan': tan1}
+                 'tan': tan1,
+                 'factorial': fac1,
+                 'power': pow2,
+                 'alt_cos': alt_cos1,
+                 'alt_sin': alt_sin1
+                 }
+
+
+def _analytical_factorial(x):
+    if isinstance(x, sp.Integer) or isinstance(x, sp.Float):
+        x = np.clip(x, 0, 20, dtype=np.int, casting='unsafe')
+    elif not isinstance(x, sp.Symbol):
+        try:
+            X0 = sp.symbols('X0')
+            sp.factorial(x.subs(X0, 0.0))
+            sp.factorial(x.subs(X0, 1.0))
+            sp.factorial(x.subs(X0, 2.0))
+        except ValueError:
+            return 1
+    return sp.factorial(x)
+
+
+def _analytical_power(x, k):  ## handle clipping from power function
+    if isinstance(x, float):
+        x = np.int(x)
+    if isinstance(k, float):
+        k = np.int(k)
+    return sp.Pow(x, k)
+
+
+def _analytical_alt_sin(x):
+    return sp.sin(sp.pi/2 * x)
+
+
+def _analytical_alt_cos(x):
+    return sp.cos(sp.pi/2 * x)
+
+
+locals = {
+    "add": sp.Add,
+    "sub": lambda x,y: x-y,
+    "mul": sp.Mul,
+    "div": lambda x,y: x/y,
+    "power": _analytical_power,
+    "factorial": _analytical_factorial,
+    "alt_sin": _analytical_alt_sin,
+    "alt_cos": _analytical_alt_cos
+}

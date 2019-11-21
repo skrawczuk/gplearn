@@ -15,6 +15,7 @@ from time import time
 from warnings import warn
 
 import numpy as np
+import sympy as sp
 from joblib import Parallel, delayed
 from scipy.stats import rankdata
 from sklearn.base import BaseEstimator
@@ -26,7 +27,7 @@ from sklearn.utils.multiclass import check_classification_targets
 
 from ._program import _Program
 from .fitness import _fitness_map, _Fitness
-from .functions import _function_map, _Function, sig1 as sigmoid
+from .functions import _function_map, _Function, sig1 as sigmoid, locals
 from .utils import _partition_estimators
 from .utils import check_random_state
 
@@ -218,6 +219,10 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.verbose = verbose
         self.random_state = random_state
+
+    def program_to_sympy(self):
+        if self._program is not None:
+            return sp.sympify(self._program, locals=locals).expand()#.subs(X0, k)     ##
 
     def _verbose_reporter(self, run_details=None):
         """A report of the progress of the evolution process.
