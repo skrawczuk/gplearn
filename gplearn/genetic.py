@@ -358,7 +358,7 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
             self._metric = self.metric
         elif isinstance(self, RegressorMixin):
             if self.metric not in ('mean absolute error', 'mse', 'rmse',
-                                   'pearson', 'spearman'):
+                                   'pearson', 'spearman', 'weighted_mae'):
                 raise ValueError('Unsupported metric: %s' % self.metric)
             self._metric = _fitness_map[self.metric]
         elif isinstance(self, ClassifierMixin):
